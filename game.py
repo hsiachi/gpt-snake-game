@@ -76,6 +76,7 @@ class SnakeGame:
         self.width = width
         self.score = 0
         self.paused = False
+        self.obstacles = []  # List to store obstacle positions
 
     def setup(self):
         curses.curs_set(0)
@@ -92,6 +93,18 @@ class SnakeGame:
         food_x = self.width // 2
         food_y = self.height // 2
         self.food = Food(self.window, food_y, food_x)
+
+        # Generate obstacles
+        self.generate_obstacles()
+
+    def generate_obstacles(self):
+        num_obstacles = min(10, (self.height - 2) * (self.width - 2) // 10)  # Maximum 10% of available cells
+        self.obstacles = []
+        while len(self.obstacles) < num_obstacles:
+            y = randint(1, self.height - 2)
+            x = randint(1, self.width - 2)
+            if [y, x] not in self.snake.body and [y, x] != self.food.position and [y, x] not in self.obstacles:
+                self.obstacles.append([y, x])
 
     def handle_input(self):
         next_key = self.window.getch()
@@ -123,7 +136,7 @@ class SnakeGame:
                 head[1] = 1
 
         # Check if the snake collided with itself
-        if self.snake.collided_with_self():
+        if self.snake.collided_with_self() or self.snake.body[0] in self.obstacles:
             return False
         # Check if the snake ate the food
         if self.snake.body[0] == self.food.position:
@@ -131,11 +144,17 @@ class SnakeGame:
             self.snake.body.append(self.snake.body[-1][:])  # Grow the snake
             self.food.generate(self.height, self.width, self.snake)
 
+            # Generate new obstacles after eating the food
+            self.generate_obstacles()
+
         return True
 
     def draw(self):
         self.window.clear()
         self.window.border(0)
+        # Draw obstacles
+        for obstacle in self.obstacles:
+            self.window.addch(obstacle[0], obstacle[1], "#")
         self.food.draw()
         self.snake.draw()
         self.window.addstr(0, self.width // 2 - 4, f"Score: {self.score}")
